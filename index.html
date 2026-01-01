@@ -25,6 +25,7 @@
     <p>อัปโหลดรูป → ลอกลาย → ดูบนเสื้อจริง → ดาวน์โหลดส่งร้าน</p>
 
     <input type="file" id="file" accept="image/*" />
+
     <select id="shirtColor" onchange="updateShirt()">
       <option value="#ffffff">เสื้อสีขาว</option>
       <option value="#000000">เสื้อสีดำ</option>
@@ -35,6 +36,17 @@
       <option value="3543">ลายกว้าง 30 ซม. (มาตรฐานร้าน)</option>
       <option value="3307">ลายกว้าง 28 ซม.</option>
       <option value="3780">ลายกว้าง 32 ซม.</option>
+    </select>
+
+    <select id="printMode">
+      <option value="dtf">โหมด DTF (พิมพ์สี / ร้านนิยม)</option>
+      <option value="flex">โหมด Flex (เส้นคม ตัดได้)</option>
+    </select>
+
+    <select id="printPosition" onchange="updatePosition()">
+      <option value="90">กลางอก</option>
+      <option value="60">อกซ้าย</option>
+      <option value="40">อกบน</option>
     </select>
 
     <button onclick="trace()">ลอกลายเสื้อ</button>
@@ -65,25 +77,34 @@ function updateShirt(){
 function trace(){
   const f = document.getElementById('file').files[0];
   if(!f){ alert('กรุณาเลือกรูป'); return; }
+
+  const targetWidth = parseInt(document.getElementById('printSize').value);
+  const mode = document.getElementById('printMode').value;
+
   const img = new Image();
   img.onload = () => {
-    canvas.width = img.width;
-    canvas.height = img.height;
+    const ratio = img.height / img.width;
+    canvas.width = targetWidth;
+    canvas.height = Math.round(targetWidth * ratio);
+
     ctx.clearRect(0,0,canvas.width,canvas.height);
-    ctx.drawImage(img,0,0);
+    ctx.drawImage(img,0,0,canvas.width,canvas.height);
 
     const imageData = ctx.getImageData(0,0,canvas.width,canvas.height);
     const d = imageData.data;
 
     for(let i=0;i<d.length;i+=4){
       const gray = d[i]*0.299 + d[i+1]*0.587 + d[i+2]*0.114;
-      const v = gray>140 ? 255 : 0;
-      d[i]=d[i+1]=d[i+2]= v;
-      d[i+3]= v===255 ? 255 : 0; // พื้นหลังโปร่งใส
+      let v;
+      if(mode==='flex'){
+        v = gray>150 ? 255 : 0;
+      }else{
+        v = gray>130 ? 255 : 0;
+      }
+      d[i]=d[i+1]=d[i+2]=v;
+      d[i+3]=v===255?255:0;
     }
     ctx.putImageData(imageData,0,0);
-
-    // แสดงบนเสื้อ mockup
     printImg.src = canvas.toDataURL('image/png');
   };
   img.src = URL.createObjectURL(f);
@@ -91,10 +112,18 @@ function trace(){
 
 function exportPNG(){
   if(canvas.width===0){ alert('กรุณาลอกลายก่อน'); return; }
+  const sizeText = document.getElementById('printSize').selectedOptions[0].text;
+  const sizeLabel = sizeText.match(/\d+/)[0];
+  const mode = document.getElementById('printMode').value.toUpperCase();
   const link = document.createElement('a');
-  link.download = 'tshirt-print-ready.png';
+  link.download = `PRINT_${sizeLabel}_${mode}.png`;
   link.href = canvas.toDataURL('image/png');
   link.click();
+}
+
+function updatePosition(){
+  const top = document.getElementById('printPosition').value;
+  printImg.style.top = top + 'px';
 }
 
 updateShirt();
