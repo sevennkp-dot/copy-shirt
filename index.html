@@ -6,31 +6,55 @@
 <title>👕 ระบบลอกลายเสื้อ (Canvas Demo)</title>
 <style>
   body{font-family:Arial,Helvetica,sans-serif;background:#f4f4f4;padding:20px}
-  .card{max-width:520px;margin:auto;background:#fff;border-radius:14px;padding:20px;box-shadow:0 10px 25px rgba(0,0,0,.08)}
+  .card{max-width:560px;margin:auto;background:#fff;border-radius:14px;padding:20px;box-shadow:0 10px 25px rgba(0,0,0,.08)}
   h2{text-align:center;margin:0 0 10px}
   p{color:#555;text-align:center}
-  input,button{width:100%;padding:12px;margin-top:12px;font-size:16px}
+  input,button,select{width:100%;padding:12px;margin-top:12px;font-size:16px}
   button{background:#000;color:#fff;border:none;border-radius:10px;cursor:pointer}
   button:hover{opacity:.85}
   canvas{width:100%;margin-top:15px;border-radius:10px;background:#eee}
   .hint{font-size:13px;color:#777;margin-top:8px;text-align:center}
+  .mockup{margin-top:20px;text-align:center}
+  .shirt{width:260px;height:320px;margin:auto;position:relative;border-radius:20px;background:#fff;box-shadow:inset 0 0 0 2px #ddd}
+  .print{position:absolute;top:90px;left:50%;transform:translateX(-50%);width:140px}
 </style>
 </head>
 <body>
   <div class="card">
     <h2>👕 ระบบลอกลายเสื้อ</h2>
-    <p>อัปโหลดรูป → กดปุ่ม → ได้ลายเส้น (รันทันทีบน Canvas)</p>
+    <p>อัปโหลดรูป → ลอกลาย → ดูบนเสื้อจริง → ดาวน์โหลดส่งร้าน</p>
 
     <input type="file" id="file" accept="image/*" />
+    <select id="shirtColor" onchange="updateShirt()">
+      <option value="#ffffff">เสื้อสีขาว</option>
+      <option value="#000000">เสื้อสีดำ</option>
+      <option value="#e5e5e5">เสื้อสีเทา</option>
+    </select>
+
     <button onclick="trace()">ลอกลายเสื้อ</button>
+    <button onclick="exportPNG()">ดาวน์โหลดไฟล์สำหรับร้านสกรีน</button>
 
     <canvas id="c"></canvas>
-    <div class="hint">เดโมนี้ประมวลผลฝั่งเว็บ (Canvas) เพื่อให้เห็นผลทันที<br/>เวอร์ชันใช้งานจริงจะเชื่อม Backend AI</div>
+
+    <div class="mockup">
+      <h3>ตัวอย่างบนเสื้อ</h3>
+      <div class="shirt" id="shirt">
+        <img id="printImg" class="print" />
+      </div>
+    </div>
+
+    <div class="hint">ตอนนี้ร้านสกรีนจะเห็นลายบนเสื้อก่อนพิมพ์จริง</div>
   </div>
 
 <script>
 const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
+const printImg = document.getElementById('printImg');
+const shirt = document.getElementById('shirt');
+
+function updateShirt(){
+  shirt.style.background = document.getElementById('shirtColor').value;
+}
 
 function trace(){
   const f = document.getElementById('file').files[0];
@@ -39,20 +63,35 @@ function trace(){
   img.onload = () => {
     canvas.width = img.width;
     canvas.height = img.height;
+    ctx.clearRect(0,0,canvas.width,canvas.height);
     ctx.drawImage(img,0,0);
 
     const imageData = ctx.getImageData(0,0,canvas.width,canvas.height);
     const d = imageData.data;
 
-    // แปลงเป็นขาวดำ + edge แบบง่าย (ใช้งานได้จริง)
     for(let i=0;i<d.length;i+=4){
       const gray = d[i]*0.299 + d[i+1]*0.587 + d[i+2]*0.114;
-      d[i]=d[i+1]=d[i+2]= gray>140 ? 255 : 0;
+      const v = gray>140 ? 255 : 0;
+      d[i]=d[i+1]=d[i+2]= v;
+      d[i+3]= v===255 ? 255 : 0; // พื้นหลังโปร่งใส
     }
     ctx.putImageData(imageData,0,0);
+
+    // แสดงบนเสื้อ mockup
+    printImg.src = canvas.toDataURL('image/png');
   };
   img.src = URL.createObjectURL(f);
 }
+
+function exportPNG(){
+  if(canvas.width===0){ alert('กรุณาลอกลายก่อน'); return; }
+  const link = document.createElement('a');
+  link.download = 'tshirt-print-ready.png';
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+}
+
+updateShirt();
 </script>
 </body>
 </html>
