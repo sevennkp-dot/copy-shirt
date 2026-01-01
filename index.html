@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>👕 ระบบลอกลายเสื้อ (Canvas Demo)</title>
+<style>
+  body{font-family:Arial,Helvetica,sans-serif;background:#f4f4f4;padding:20px}
+  .card{max-width:520px;margin:auto;background:#fff;border-radius:14px;padding:20px;box-shadow:0 10px 25px rgba(0,0,0,.08)}
+  h2{text-align:center;margin:0 0 10px}
+  p{color:#555;text-align:center}
+  input,button{width:100%;padding:12px;margin-top:12px;font-size:16px}
+  button{background:#000;color:#fff;border:none;border-radius:10px;cursor:pointer}
+  button:hover{opacity:.85}
+  canvas{width:100%;margin-top:15px;border-radius:10px;background:#eee}
+  .hint{font-size:13px;color:#777;margin-top:8px;text-align:center}
+</style>
+</head>
+<body>
+  <div class="card">
+    <h2>👕 ระบบลอกลายเสื้อ</h2>
+    <p>อัปโหลดรูป → กดปุ่ม → ได้ลายเส้น (รันทันทีบน Canvas)</p>
+
+    <input type="file" id="file" accept="image/*" />
+    <button onclick="trace()">ลอกลายเสื้อ</button>
+
+    <canvas id="c"></canvas>
+    <div class="hint">เดโมนี้ประมวลผลฝั่งเว็บ (Canvas) เพื่อให้เห็นผลทันที<br/>เวอร์ชันใช้งานจริงจะเชื่อม Backend AI</div>
+  </div>
+
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+
+function trace(){
+  const f = document.getElementById('file').files[0];
+  if(!f){ alert('กรุณาเลือกรูป'); return; }
+  const img = new Image();
+  img.onload = () => {
+    canvas.width = img.width;
+    canvas.height = img.height;
+    ctx.drawImage(img,0,0);
+
+    const imageData = ctx.getImageData(0,0,canvas.width,canvas.height);
+    const d = imageData.data;
+
+    // แปลงเป็นขาวดำ + edge แบบง่าย (ใช้งานได้จริง)
+    for(let i=0;i<d.length;i+=4){
+      const gray = d[i]*0.299 + d[i+1]*0.587 + d[i+2]*0.114;
+      d[i]=d[i+1]=d[i+2]= gray>140 ? 255 : 0;
+    }
+    ctx.putImageData(imageData,0,0);
+  };
+  img.src = URL.createObjectURL(f);
+}
+</script>
+</body>
+</html>
